@@ -24,7 +24,7 @@ modded 7.7.14 - fixed progmem for new avr-gcc (thanks to forum user kirill9617)
 #endif
 
 #ifndef WINDOW // wether using the window function or not
-  #define WINDOW 0
+  #define WINDOW 1
 #endif
 
 #ifndef OCT_NORM // wether using the octave normilization
@@ -36,11 +36,11 @@ modded 7.7.14 - fixed progmem for new avr-gcc (thanks to forum user kirill9617)
 #endif
 
 #ifndef LOG_OUT // wether using the log output function or not
-  #define LOG_OUT 1
+  #define LOG_OUT 0
 #endif
 
 #ifndef LIN_OUT // wether using the linear output function or not
-  #define LIN_OUT 0
+  #define LIN_OUT 1
 #endif
 
 #ifndef LIN_OUT8 // wether using the linear output function or not
