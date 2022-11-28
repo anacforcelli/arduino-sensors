@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <FHT.h>
 
-volatile uint8_t i;
+volatile uint16_t i;
 volatile bool stop;
 
 ISR(ADC_vect){
@@ -61,12 +61,13 @@ void loop() {
 
   /* WAITS FOR CONVERSIONS TO COMPLETE*/
   while (!stop);
-   
+  
   fht_reorder(); // reorder the data before doing the fht
   fht_run(); // process the data in the fht
-  fht_mag_log();
+  fht_mag_lin();
 
-  Serial.println("A");
+  Serial.print("A\n");
+  fht_lin_out[0] = 0;
   for (int g = 0; g < FHT_N/2; g++)
-    Serial.println(fht_log_out[g]);
+    Serial.println(fht_lin_out[g]);
 }
