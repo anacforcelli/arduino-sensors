@@ -45,21 +45,22 @@ void removeDC(){
 
 float getMajorFrequency(int samplingFrequency)
 {
-	uint16_t maxY = 0;
-	int ind = 0;
-	for (int i = 1; i < (samples / 2); i++) {
+	double maxY = 0;
+	uint16_t IndexOfMaxY = 0;
+	//If sampling_frequency = 2 * max_frequency in signal,
+	//value would be stored at position samples/2
+	for (uint16_t i = 1; i < ((samples >> 1)); i++) {
 		if ((fht_lin_out[i-1] < fht_lin_out[i]) && (fht_lin_out[i] > fht_lin_out[i+1])) {
 			if (fht_lin_out[i] > maxY) {
 				maxY = fht_lin_out[i];
-				ind = i;
+				IndexOfMaxY = i;
 			}
 		}
 	}
-
-	float delta = 0.5 * (fht_lin_out[ind-1] - fht_lin_out[ind+1]) / (fht_lin_out[ind-1] - 2.0 * fht_lin_out[ind] + fht_lin_out[ind+1]);
-	float interpolatedX = ((ind + delta)  * samplingFrequency) / (samples-1);
-	if (ind == (samples >> 1)) //To improve calculation on edge values
-		interpolatedX = ((ind + delta)  * samplingFrequency) / samples;
+	double delta = 0.5 * ((fht_lin_out[IndexOfMaxY-1] - fht_lin_out[IndexOfMaxY+1]) / (fht_lin_out[IndexOfMaxY-1] - (2.0 * fht_lin_out[IndexOfMaxY]) + fht_lin_out[IndexOfMaxY+1]));
+	double interpolatedX = ((IndexOfMaxY + delta)  * samplingFrequency) / (samples-1);
+	if(IndexOfMaxY==(samples >> 1)) //To improve calculation on edge values
+		interpolatedX = ((IndexOfMaxY + delta)  * samplingFrequency) / (samples);
 	// returned value: interpolated frequency peak apex
 	return(interpolatedX);
 }
