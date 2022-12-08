@@ -34,12 +34,7 @@ ISR(ADC_vect){
 EMPTY_INTERRUPT (TIMER1_COMPB_vect)
 
 void removeDC(){
-  int mean = 0;
-  for (int i = 0; i < samples; i++)
-    mean += fht_input[i];
-  mean = mean / samples;
-  for (int i = 0; i < samples; i++)
-    fht_input[i] -= mean;
+  fht_lin_out[0] = 0;
 }
 
 
@@ -51,8 +46,8 @@ float getMajorFrequency(int samplingFrequency)
 	//value would be stored at position samples/2
 	for (uint16_t i = 1; i < ((samples >> 1)); i++) {
 		if ((fht_lin_out[i-1] < fht_lin_out[i]) && (fht_lin_out[i] > fht_lin_out[i+1])) {
-			if (fht_lin_out[i] > maxY) {
-				maxY = fht_lin_out[i];
+			if ((double)fht_lin_out[i] > maxY) {
+				maxY = (double)fht_lin_out[i];
 				IndexOfMaxY = i;
 			}
 		}
@@ -87,9 +82,9 @@ void loop() {
 
   while (!stop);  
   fht_reorder(); 
-  removeDC();
   fht_run();
   fht_mag_lin();
+  removeDC();
 
   float freq = getMajorFrequency(15037);
 
@@ -97,9 +92,9 @@ void loop() {
 
   int pressure = bmp.readPressure();
 
-  turb = analogRead(turbPin);
+  turb = analogRead(turbPin);/* 
   float v = 5.0 * (turb/1023.0);
-  turb = (int) -1120.4*v*v + 5742.3 * v - 4352.9;
+  turb = (int) -1120.4*v*v + 5742.3 * v - 4352.9; */
 
   cloro = analogRead(cloroPin);
 
