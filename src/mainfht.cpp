@@ -1,20 +1,19 @@
 #include <Arduino.h>
 #include <FHT.h>
-#include <Adafruit_BMP085.h> //INCLUSÃO DE BIBLIOTECA
+#include <Adafruit_BMP085.h> 
 
 #define soundPin A0
 #define turbPin A1
 #define cloroPin A2
 #define samples FHT_N
  
-Adafruit_BMP085 bmp; //OBJETO DO TIPO Adafruit_BMP085 (I2C)
+Adafruit_BMP085 bmp; 
 
 volatile uint16_t count;
 volatile bool stop;
-volatile char reading;
 
-volatile float turb;
-volatile float cloro;
+int turb;
+int cloro;
 
 ISR(ADC_vect){
   byte m = ADCL; // fetch adc data
@@ -24,16 +23,11 @@ ISR(ADC_vect){
   k -= 0x0200; // form into a signed int
   k <<= 6; // form into a 16b signed int
 
-  if (reading == 'f'){
-    fht_input[count++] = k; // put real data into bins
-    if (count >= FHT_N){
-      ADCSRA = 0;  
-      stop = true;
-    }
-  } else if (reading == 'u') {
-    turb = k;
-  } else if (reading == 'c') {
-    cloro = k;
+  fht_input[count++] = k;
+
+  if (count >= samples){
+    ADCSRA = 0b10000111;   //ADSC = 0; ADIE = 0 -> disable interrupt; prescaler = 128 -> adc clock = 125kHz
+    stop = true;
   }
 }
 
@@ -51,13 +45,11 @@ void removeDC(){
 
 float getMajorFrequency(int samplingFrequency)
 {
-	int maxY = 0;
+	uint16_t maxY = 0;
 	int ind = 0;
-	//If sampling_frequency = 2 * max_frequency in signal,
-	//value would be stored at position samples/2
-	for (int i = 1; i < ((samples / 2)); i++) {
+	for (int i = 1; i < (samples / 2); i++) {
 		if ((fht_lin_out[i-1] < fht_lin_out[i]) && (fht_lin_out[i] > fht_lin_out[i+1])) {
-			if ((int)fht_lin_out[i] > maxY) {
+			if (fht_lin_out[i] > maxY) {
 				maxY = fht_lin_out[i];
 				ind = i;
 			}
@@ -66,7 +58,7 @@ float getMajorFrequency(int samplingFrequency)
 
 	float delta = 0.5 * (fht_lin_out[ind-1] - fht_lin_out[ind+1]) / (fht_lin_out[ind-1] - 2.0 * fht_lin_out[ind] + fht_lin_out[ind+1]);
 	float interpolatedX = ((ind + delta)  * samplingFrequency) / (samples-1);
-	if (ind == samples >> 1) //To improve calculation on edge values
+	if (ind == (samples >> 1)) //To improve calculation on edge values
 		interpolatedX = ((ind + delta)  * samplingFrequency) / samples;
 	// returned value: interpolated frequency peak apex
 	return(interpolatedX);
@@ -81,7 +73,10 @@ void setup() {
   OCR1A   = 0x85;
   OCR1B   = 0x85; // = 133dec 2MHz/133 = 15.037KHz
 
-  Serial.begin(115200);
+  Serial.begin(9600);
+
+  if(!bmp.begin())
+    Serial.println("bmp180 não encontrado");
 }
 
 void loop() {
@@ -89,34 +84,48 @@ void loop() {
   stop = false;
 
   ADMUX = (1 << REFS0) | ((soundPin-14) & 0x07);	
-  ADCSRB = 0b00000101;
-  ADCSRA = 0b10111110;
+  ADCSRB = 0b00000101; // auto trigger source = timer compare B
+  ADCSRA = 0b10111110; // interrupt enable; prescaler = 64 -> ADC clock = 250KHz
 
   while (!stop);  
-  fht_reorder(); // reorder the data before doing the fht
+  fht_reorder(); 
   removeDC();
-  fht_run(); // process the data in the fht
+  fht_run();
   fht_mag_lin();
 
-  reading = 'c';
-  ADMUX |=  ((cloroPin-14) & 0x07);
-  ADCSRA |= (1 << ADSC);
-  while (ADSC != 0);
-
-  reading = 'u';
-  ADMUX |=  ((turbPin-14) & 0x07);
-  ADCSRA |= (1 << ADSC);
-  while (ADSC != 0);
-
   float freq = getMajorFrequency(15037);
-  Serial.print("f|");
-  Serial.print(freq);
-  Serial.print("t|");
-  Serial.print(bmp.readTemperature());
-  Serial.print("p|");
-  Serial.print(bmp.readPressure());
-  Serial.print("u|");
-  Serial.print(turb);
-  Serial.print("c|");
+
+  int temp = bmp.readTemperature();
+  int pressure = bmp.readPressure();
+
+  ADMUX = (1 << REFS0) | ((cloroPin-14) & 0x07);
+  ADCSRA |= (1 << ADSC);
+  while (ADSC == 1);
+  turb = (int) (ADCL | ADCH << 8);
+
+  ADMUX = (1 << REFS0) | ((turbPin-14) & 0x07);
+  ADCSRA |= (1 << ADSC);
+  while (ADSC == 1);
+  cloro = (int) (ADCL | ADCH << 8);
+
+  Serial.print("t");
+  Serial.print(temp*100);
+  Serial.print("|");
+  Serial.print("p");
+  Serial.print(-pressure*100);
+  Serial.print("|");
+  Serial.print("f");
+  Serial.print((int)freq);
+  Serial.print("|");
+  Serial.print("c");
   Serial.print(cloro);
+  Serial.print("|");
+  Serial.print("u");
+  Serial.print(turb);
+  Serial.print("|");
+  Serial.print("s");
+  Serial.print(temp*100-pressure*100+(int)freq+cloro+turb);
+  Serial.print("|");
+  Serial.println("");
+  delay(5000);
 }
