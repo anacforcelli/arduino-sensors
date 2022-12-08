@@ -5,7 +5,7 @@
 #define soundPin A0
 #define turbPin A1
 #define cloroPin A2
-#define samples 128
+#define samples 64
  
 Adafruit_BMP085 bmp; 
 
@@ -29,7 +29,7 @@ ISR(ADC_vect){
   vReal[count++] = k;
 
   if (count >= samples){
-    ADCSRA = 0b10000111;   //ADSC = 0; ADIE = 0 -> disable interrupt; prescaler = 128 -> adc clock = 125kHz
+    ADCSRA = 0b10000110; // interrupt enable; prescaler = 64 -> ADC clock = 250KHz
     stop = true;
   }
 }
@@ -64,7 +64,6 @@ void loop() {
 
   while (!stop); 
   
-  FFT.DCRemoval(vReal, samples);
   FFT.Compute(vReal, vImag, samples, FFT_FORWARD);
   FFT.ComplexToMagnitude(vReal, vImag, samples);
 
@@ -84,7 +83,7 @@ void loop() {
   Serial.print(int(temp*100));
   Serial.print("|");
   Serial.print("p");
-  Serial.print(pressure*100);
+  Serial.print(-pressure*100);
   Serial.print("|");
   Serial.print("f");
   Serial.print((int)freq);
@@ -96,7 +95,7 @@ void loop() {
   Serial.print(turb);
   Serial.print("|");
   Serial.print("s");
-  Serial.print(int(temp*100)+pressure*100+(int)freq+cloro+turb);
+  Serial.print(int(temp*100)-pressure*100+(int)freq+cloro+turb);
   Serial.print("|");
   Serial.println("");
   delay(1000); 
