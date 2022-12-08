@@ -95,24 +95,21 @@ void loop() {
 
   float freq = getMajorFrequency(15037);
 
-  int temp = bmp.readTemperature();
+  float temp = bmp.readTemperature();
+
   int pressure = bmp.readPressure();
 
-  ADMUX = (1 << REFS0) | ((cloroPin-14) & 0x07);
-  ADCSRA |= (1 << ADSC);
-  while (ADSC == 1);
-  turb = (int) (ADCL | ADCH << 8);
+  turb = analogRead(turbPin);
+  float v = 5.0 * (turb/1023.0);
+  turb = (int) -1120.4*v*v + 5742.3 * v - 4352.9;
 
-  ADMUX = (1 << REFS0) | ((turbPin-14) & 0x07);
-  ADCSRA |= (1 << ADSC);
-  while (ADSC == 1);
-  cloro = (int) (ADCL | ADCH << 8);
+  cloro = analogRead(cloroPin);
 
   Serial.print("t");
-  Serial.print(temp*100);
+  Serial.print(int(temp*100));
   Serial.print("|");
   Serial.print("p");
-  Serial.print(-pressure*100);
+  Serial.print(pressure*100);
   Serial.print("|");
   Serial.print("f");
   Serial.print((int)freq);
@@ -124,8 +121,8 @@ void loop() {
   Serial.print(turb);
   Serial.print("|");
   Serial.print("s");
-  Serial.print(temp*100-pressure*100+(int)freq+cloro+turb);
+  Serial.print(int(temp*100)+pressure*100+(int)freq+cloro+turb);
   Serial.print("|");
   Serial.println("");
-  delay(5000);
+  delay(1000); 
 }
