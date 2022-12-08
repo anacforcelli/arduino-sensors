@@ -5,7 +5,7 @@
 #define soundPin A0
 #define turbPin A1
 #define cloroPin A2
-#define samples 64
+#define samples 128
  
 Adafruit_BMP085 bmp; 
 
@@ -98,5 +98,5 @@ void loop() {
   Serial.print(int(temp*100)-pressure*100+(int)freq+cloro+turb);
   Serial.print("|");
   Serial.println("");
-  delay(1000); 
+  delay(500); 
 }
