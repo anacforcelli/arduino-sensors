@@ -58,10 +58,7 @@ float getMajorFrequency(int samplingFrequency)
 		}
 	}
 	double delta = 0.5 * ((fht_lin_out[IndexOfMaxY-1] - fht_lin_out[IndexOfMaxY+1]) / (fht_lin_out[IndexOfMaxY-1] - (2.0 * fht_lin_out[IndexOfMaxY]) + fht_lin_out[IndexOfMaxY+1]));
-	double interpolatedX = ((IndexOfMaxY + delta)  * samplingFrequency) / (samples-1);
-	if(IndexOfMaxY==(samples >> 1)) //To improve calculation on edge values
-		interpolatedX = ((IndexOfMaxY + delta)  * samplingFrequency) / (samples);
-	// returned value: interpolated frequency peak apex
+	float interpolatedX = ((IndexOfMaxY + delta)  * samplingFrequency) / (samples-1);
 	return(interpolatedX);
 }
 
