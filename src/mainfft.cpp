@@ -1,13 +1,16 @@
 #include <Arduino.h>
-#include <FHT.h>
+#include <arduinoFFT.h>
 #include <Adafruit_BMP085.h> 
 
 #define soundPin A0
 #define turbPin A1
 #define cloroPin A2
-#define samples FHT_N
+#define samples 128
  
 Adafruit_BMP085 bmp; 
+
+double vReal[samples];
+double vImag[samples];
 
 volatile uint16_t count;
 volatile bool stop;
@@ -15,15 +18,15 @@ volatile bool stop;
 int turb;
 int cloro;
 
+arduinoFFT FFT;
+
 ISR(ADC_vect){
   byte m = ADCL; // fetch adc data
   byte j = ADCH;
 
-  int k = (j << 8) | m; // form into an int
-  k -= 0x0200; // form into a signed int
-  k <<= 6; // form into a 16b signed int
+  double k = (double) ((uint16_t)(j << 8) | (uint16_t) m); // form into an int
 
-  fht_input[count++] = k;
+  vReal[count++] = k;
 
   if (count >= samples){
     ADCSRA = 0b10000111;   //ADSC = 0; ADIE = 0 -> disable interrupt; prescaler = 128 -> adc clock = 125kHz
@@ -32,30 +35,6 @@ ISR(ADC_vect){
 }
 
 EMPTY_INTERRUPT (TIMER1_COMPB_vect)
-
-void removeDC(){
-  fht_lin_out[0] = 0;
-}
-
-
-float getMajorFrequency(int samplingFrequency)
-{
-	double maxY = 0;
-	uint16_t IndexOfMaxY = 0;
-	//If sampling_frequency = 2 * max_frequency in signal,
-	//value would be stored at position samples/2
-	for (uint16_t i = 1; i < ((samples >> 1)); i++) {
-		if ((fht_lin_out[i-1] < fht_lin_out[i]) && (fht_lin_out[i] > fht_lin_out[i+1])) {
-			if ((double)fht_lin_out[i] > maxY) {
-				maxY = (double)fht_lin_out[i];
-				IndexOfMaxY = i;
-			}
-		}
-	}
-	double delta = 0.5 * ((fht_lin_out[IndexOfMaxY-1] - fht_lin_out[IndexOfMaxY+1]) / (fht_lin_out[IndexOfMaxY-1] - (2.0 * fht_lin_out[IndexOfMaxY]) + fht_lin_out[IndexOfMaxY+1]));
-	float interpolatedX = ((IndexOfMaxY + delta)  * samplingFrequency) / (samples-1);
-	return(interpolatedX);
-}
 
 void setup() {
   TCCR1A  = 0;
@@ -76,17 +55,20 @@ void loop() {
   count = 0;
   stop = false;
 
+  for (int i = 0; i < samples; i++)
+    vImag[i] = 0;
+
   ADMUX = (1 << REFS0) | ((soundPin-14) & 0x07);	
   ADCSRB = 0b00000101; // auto trigger source = timer compare B
   ADCSRA = 0b10111110; // interrupt enable; prescaler = 64 -> ADC clock = 250KHz
 
-  while (!stop);  
-  fht_reorder(); 
-  fht_run();
-  fht_mag_lin();
-  removeDC();
+  while (!stop); 
+  
+  FFT.DCRemoval(vReal, samples);
+  FFT.Compute(vReal, vImag, samples, FFT_FORWARD);
+  FFT.ComplexToMagnitude(vReal, vImag, samples);
 
-  float freq = getMajorFrequency(15037);
+  double freq =  FFT.MajorPeak(vReal, samples, 15037);
 
   float temp = bmp.readTemperature();
 
