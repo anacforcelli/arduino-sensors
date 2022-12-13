@@ -1,10 +1,12 @@
 #include <Arduino.h>
+#include <LoRa.h>
 #include <arduinoFFT.h>
 #include <Adafruit_BMP085.h> 
 
 #define soundPin A0
 #define turbPin A1
 #define cloroPin A2
+
 #define samples 128
  
 Adafruit_BMP085 bmp; 
@@ -21,10 +23,10 @@ int cloro;
 arduinoFFT FFT;
 
 ISR(ADC_vect){
-  byte m = ADCL; // fetch adc data
-  byte j = ADCH;
+  uint16_t m = ADCL; // fetch adc data
+  uint16_t j = ADCH;
 
-  double k = (double) ((uint16_t)(j << 8) | (uint16_t) m); // form into an int
+  double k = (double) (j << 8 | m);
 
   vReal[count++] = k;
 
@@ -48,7 +50,10 @@ void setup() {
   Serial.begin(9600);
 
   if(!bmp.begin())
-    Serial.println("bmp180 não encontrado");
+    Serial.println("BMP180 não encontrado");
+
+  if(!LoRa.begin(433e6))
+    Serial.println("LoRa nao encotrado");
 }
 
 void loop() {
@@ -71,32 +76,24 @@ void loop() {
 
   float temp = bmp.readTemperature();
 
-  int pressure = bmp.readPressure();
+  int pres = bmp.readPressure();
 
-  turb = analogRead(turbPin);/* 
+  turb = analogRead(turbPin);
   float v = 5.0 * (turb/1023.0);
-  turb = (int) -1120.4*v*v + 5742.3 * v - 4352.9; */
+  if (v < 2.5)
+    turb = 3000;
+  else
+    turb = (int) -1120.4*v*v + 5742.3*v - 4352.9;
 
   cloro = analogRead(cloroPin);
 
-  Serial.print("t");
-  Serial.print(int(temp*100));
-  Serial.print("|");
-  Serial.print("p");
-  Serial.print(-pressure*100);
-  Serial.print("|");
-  Serial.print("f");
-  Serial.print((int)freq);
-  Serial.print("|");
-  Serial.print("c");
-  Serial.print(cloro);
-  Serial.print("|");
-  Serial.print("u");
-  Serial.print(turb);
-  Serial.print("|");
-  Serial.print("s");
-  Serial.print(int(temp*100)-pressure*100+(int)freq+cloro+turb);
-  Serial.print("|");
-  Serial.println("");
-  delay(500); 
+  LoRa.beginPacket();
+  LoRa.println(freq);
+  LoRa.println(temp);
+  LoRa.println(pres);
+  LoRa.println(turb);
+  LoRa.println(cloro);
+  LoRa.endPacket(true);
+  
+  delay(5000); 
 }
