@@ -73,9 +73,14 @@ void loop() {
 
   int pressure = bmp.readPressure();
 
-  turb = analogRead(turbPin);/* 
+  turb = analogRead(turbPin);
   float v = 5.0 * (turb/1023.0);
-  turb = (int) -1120.4*v*v + 5742.3 * v - 4352.9; */
+  if (v > 4.2)
+    turb = 0;
+  else if (v < 2.5)
+    turb = 3000;
+  else
+    turb = (int) -1120.4*v*v + 5742.3 * v - 4352.9;
 
   cloro = analogRead(cloroPin);
 
@@ -83,7 +88,7 @@ void loop() {
   Serial.print(int(temp*100));
   Serial.print("|");
   Serial.print("p");
-  Serial.print(-pressure*100);
+  Serial.print(abs(pressure));
   Serial.print("|");
   Serial.print("f");
   Serial.print((int)freq);
@@ -95,7 +100,7 @@ void loop() {
   Serial.print(turb);
   Serial.print("|");
   Serial.print("s");
-  Serial.print(int(temp*100)-pressure*100+(int)freq+cloro+turb);
+  Serial.print(int(temp*100)+abs(pressure)+(int)freq+cloro+turb);
   Serial.print("|");
   Serial.println("");
   delay(500); 
