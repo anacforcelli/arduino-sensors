@@ -103,5 +103,5 @@ void loop() {
   Serial.print(int(temp*100)+abs(pressure)+(int)freq+cloro+turb);
   Serial.print("|");
   Serial.println("");
-  delay(500); 
+  delay(5000); 
 }
