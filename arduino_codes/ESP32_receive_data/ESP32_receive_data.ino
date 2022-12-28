@@ -1,62 +1,67 @@
-#define BLYNK_DEVICE_NAME "Lab Embarcados"
-#define BLYNK_AUTH_TOKEN "aTBeF3LuSot_3SZcaq_E6oe5IMUcsxRi"
+#define BLYNK_TEMPLATE_ID "TMPL99tvUYhG"
+#define BLYNK_DEVICE_NAME "TCC"
+#define BLYNK_AUTH_TOKEN "HIexcU1Lnm0I9jxBV4SLzzEvgnZ6eyf7"
 
 #define BLYNK_PRINT Serial
 
 #include <LoRa.h>
-#include <ESP32WiFi.h>
+#include <WiFi.h>
 #include <BlynkSimpleEsp32.h>
 
 char auth[] = BLYNK_AUTH_TOKEN;
+char ssid[] = "ANA";
+char pass[] = "AbEF_1CGst9";
 
-char ssid[] = "LAB_DIGITAL";
-char pass[] = "C1-17*2018@labdig";
 
-BlynkTimer timer;
+void setup() {
+  Serial.begin(115200);
 
-BLYNK_CONNECTED() {}
+  Blynk.begin(auth, ssid, pass);
 
-void onReceive(int packetSize)
-{
-	float freq = LoRa.parseFloat();
-	float temp = LoRa.parseFloat();
-	int pres = LoRa.parseInt();
-	int turb = LoRa.parseInt();
-	int cloro = LoRa.parseInt();
+  LoRa.setPins(5, 17, 16);
 
-	Serial.println("Recebeu pacote: ");
-	Serial.println(freq);
-	Serial.println(temp);
-	Serial.println(pres);
-	Serial.println(turb);
-	Serial.println(cloro);
-	Serial.print("RSSI: ");
-	Serial.println(LoRa.packetRssi());
+  if (!LoRa.begin(433e6)) {
+    Serial.println("LoRa não encontrado");
+    while (1);
+  }
 
-	// codigo visor
-
-	Blynk.virtualWrite(V2, temp);
-	Blynk.virtualWrite(V6, pres);
-	Blynk.virtualWrite(V8, freq);
-	Blynk.virtualWrite(V1, freq);
-	Blynk.virtualWrite(V7, cloro);
-	Blynk.virtualWrite(V4, turb);
+  LoRa.setCodingRate4(5);
+  LoRa.setSignalBandwidth(62.5e3);
+  LoRa.setSyncWord(42);
+  LoRa.setSpreadingFactor(8);
+  LoRa.setPreambleLength(8);
+  LoRa.setGain(6);
+  LoRa.enableCrc();
 }
 
-void setup()
-{
-	Serial.begin(9600);
+void loop() {
+  Blynk.run();
+  Blynk.virtualWrite(V5, 1);
 
-	if(!LoRa.begin(433e6))
-		Serial.println("LoRa nao encontrado");
+  int packetSize = LoRa.parsePacket();
+  if (packetSize) {
+    float freq = LoRa.parseFloat();
+    float temp = LoRa.parseFloat();
+    int pres   = LoRa.parseInt();
+    int turb   = LoRa.parseInt();
+    int cloro  = LoRa.parseInt();
 
-	Blynk.begin(auth, ssid, pass);
-	LoRa.onReceive(onReceive);
-	LoRa.receive();
-}
+    Serial.println("Recebeu pacote! (freq, temp, pres, turb, clor)");
+    Serial.println(freq);
+    Serial.println(temp);
+    Serial.println(pres);
+    Serial.println(turb);
+    Serial.println(cloro);
+    Serial.print("RSSI: ");
+    Serial.println(LoRa.packetRssi());
+    Serial.print("SNR:  ");
+    Serial.println(LoRa.packetSnr());
 
-void loop()
-{
-	Blynk.run();
-	Blynk.virtualWrite(V5, 1); // turned on
+    Blynk.virtualWrite(V2, temp);
+    Blynk.virtualWrite(V6, pres);
+    Blynk.virtualWrite(V8, freq);
+    Blynk.virtualWrite(V1, freq);
+    Blynk.virtualWrite(V7, cloro);
+    Blynk.virtualWrite(V4, turb);
+  }
 }
