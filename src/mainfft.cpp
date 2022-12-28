@@ -47,13 +47,24 @@ void setup() {
   OCR1A   = 0x85;
   OCR1B   = 0x85; // = 133dec 2MHz/133 = 15.037KHz
 
-  Serial.begin(9600);
+  Serial.begin(115200);
+  Serial.println("      /\n    _/./\n ,-'    `-:..-'/\n: o )      _  (\n\"`-....,--; `-.\\\n_______________\nScuba Thing v0.1\n");
 
   if(!bmp.begin())
-    Serial.println("BMP180 não encontrado");
+    Serial.println("BMP180 não encontrado...");
 
-  if(!LoRa.begin(433e6))
-    Serial.println("LoRa nao encotrado");
+  if(!LoRa.begin(433e6)){
+    Serial.println("LoRa não encontrado...");
+    while(1);
+  }
+
+  LoRa.setCodingRate4(5);
+  LoRa.setSignalBandwidth(125e3);
+  LoRa.setSyncWord(42);
+  LoRa.setSpreadingFactor(12);
+  LoRa.setPreambleLength(16);
+  LoRa.setGain(0);
+  LoRa.setTxPower(20);
 }
 
 void loop() {
@@ -82,17 +93,34 @@ void loop() {
   float v = 5.0 * (turb/1023.0);
   if (v < 2.5)
     turb = 3000;
+  else if (v > 4.2)
+    turb = 0;
   else
     turb = (int) -1120.4*v*v + 5742.3*v - 4352.9;
 
   cloro = analogRead(cloroPin);
 
+  Serial.print("Sending (f, t, p, t, c)");
+
   LoRa.beginPacket();
-  LoRa.println(freq);
-  LoRa.println(temp);
-  LoRa.println(pres);
-  LoRa.println(turb);
-  LoRa.println(cloro);
+
+    Serial.println();
+    LoRa.println(freq);
+    Serial.println(freq);
+
+    LoRa.println(temp);
+    Serial.println(temp);
+
+    LoRa.println(pres);
+    Serial.println(pres);
+
+    LoRa.println(turb);
+    Serial.println(turb);
+
+    LoRa.println(cloro);
+    Serial.println(cloro);
+    Serial.println();
+
   LoRa.endPacket(true);
   
   delay(5000); 
