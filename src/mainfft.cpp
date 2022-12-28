@@ -59,12 +59,13 @@ void setup() {
   }
 
   LoRa.setCodingRate4(5);
-  LoRa.setSignalBandwidth(125e3);
+  LoRa.setSignalBandwidth(62.5e3);
   LoRa.setSyncWord(42);
-  LoRa.setSpreadingFactor(12);
-  LoRa.setPreambleLength(16);
-  LoRa.setGain(0);
+  LoRa.setSpreadingFactor(8);
+  LoRa.setPreambleLength(8);
+  LoRa.setGain(6);
   LoRa.setTxPower(20);
+  LoRa.enableCrc();
 }
 
 void loop() {
@@ -100,11 +101,10 @@ void loop() {
 
   cloro = analogRead(cloroPin);
 
-  Serial.print("Sending (f, t, p, t, c)");
+  Serial.println("\nEnviando... (freq, temp, pres, turb, clor)");
 
   LoRa.beginPacket();
 
-    Serial.println();
     LoRa.println(freq);
     Serial.println(freq);
 
@@ -119,9 +119,8 @@ void loop() {
 
     LoRa.println(cloro);
     Serial.println(cloro);
-    Serial.println();
 
-  LoRa.endPacket(true);
+  LoRa.endPacket(false);
   
   delay(5000); 
 }
